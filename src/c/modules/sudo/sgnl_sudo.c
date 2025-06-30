@@ -324,7 +324,10 @@ static sgnl_result_t check_sudo_access_with_args(sgnl_client_t *client,
     for (int i = 1; i < argc && query_idx < query_count; i++) {
         if (argv[i] && strlen(argv[i]) > 0) {
             asset_ids[query_idx] = argv[i];
-            actions[query_idx] = argv[0]; // Use command name as action
+            // Create action string with 'sudo:' prefix
+            char action_buffer[256];
+            snprintf(action_buffer, sizeof(action_buffer), "sudo:%s", argv[0]);
+            actions[query_idx] = strdup(action_buffer); // Use command name as action with sudo: prefix
             query_idx++;
         }
     }
