@@ -1,0 +1,69 @@
+# Template for SoR
+# Required top-level section
+displayName: string
+icon: string
+description: string
+address: string
+defaultSyncFrequency: string
+defaultSyncMinInterval: integer
+defaultApiCallFrequency: string 
+defaultApiCallMinInterval: integer
+type: string
+adapterConfig: string
+auth:
+  - oAuth2ClientCredentials:
+      clientId: string
+      tokenUrl: string
+      authStyle: string
+      clientSecret: string
+      scope: string
+  - basic:
+      username: string
+      password: string
+  - bearer: 
+      authToken: string
+# Section to define entities, attributes and relationships to ingest to SGNL
+entities: 
+  EntityName1:
+    displayName: string
+    externalId: string
+    description: string
+    parent: string
+    syncFrequency: string
+    syncMinInterval: integer
+    apiCallFrequency: string
+    apiCallMinInterval: integer
+    pageSize: integer
+    pagesOrderedById: boolean
+    attributes:
+      - name: string
+        externalId: string
+        description: string
+        type: string
+        indexed: boolean
+        uniqueId: boolean
+        list: boolean
+      - name: string
+        externalId: string
+        description: string
+        type: string
+        indexed: boolean
+        uniqueId: boolean
+        list: boolean
+    ...
+    ...
+  EntityName2:
+    ...
+    ...
+relationships:
+  # entity relationships
+  - name: string
+    fromAttribute: string
+    toAttribue: string
+  # path relationships
+  - name: string
+    path:
+      - relationship: string
+        direction: string
+      - relationship: string
+        direction: string

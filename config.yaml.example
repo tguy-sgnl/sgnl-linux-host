@@ -1,0 +1,24 @@
+# SGNL Configuration
+# Copy this file to config.yaml and edit with your actual values
+# This will be used to generate /etc/sgnl/config.json
+
+# Required: Core SGNL settings
+tenant: "your-tenant-id"
+api_token: "your-api-token"
+
+# Optional: Custom adapter tokens (if not provided, will be auto-generated)
+# adapter_tokens:
+#   - "custom-token-1"
+#   - "custom-token-2"
+
+# Optional settings (defaults shown)
+settings:
+  base_api_url: "sgnlapis.cloud"
+  debug: false
+  timeout_seconds: 30
+  grpc_port: 8082
+  
+  # Sudo plugin specific settings
+  sudo:
+    access_msg: false         # Show success message when access granted
+    command_attribute: "id"   # Use "id", "name", or "displayName" for sudo -l output 

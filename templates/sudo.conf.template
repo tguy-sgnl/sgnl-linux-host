@@ -1,0 +1,14 @@
+#
+# Sudo configuration for SGNL policy plugin
+#
+# Generated from template for tenant: {{TENANT}}
+#
+
+# SGNL C Policy Plugin Configuration
+Plugin sgnl_policy /usr/lib/sudo/sgnl_policy_plugin.so
+
+# Debug logging (optional)
+{{#DEBUG}}
+Debug sudo /var/log/sudo_debug all@debug
+Debug sudoers.so /var/log/sudoers_debug all@debug
+{{/DEBUG}} 

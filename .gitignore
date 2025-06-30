@@ -1,0 +1,47 @@
+# Internal documentation for this project
+# Build artifacts
+build/
+*.o
+*.so
+*.dylib
+*.a
+
+# User configuration and generated files
+config.yaml
+output/
+.adapter_tokens
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets and credentials
+*.key
+*.pem
+*.crt
+
+.env
+.env.local

@@ -1,0 +1,16 @@
+{
+  "grpc_port": {{GRPC_PORT}},
+  "valid_tokens": [
+    {{#ADAPTER_TOKENS}}
+    "{{.}}"{{#unless @last}},{{/unless}}
+    {{/ADAPTER_TOKENS}}
+  ],
+  "sgnl": {
+    "tenant": "{{TENANT}}",
+    "api_url": "{{API_URL}}",
+    "system_of_record_token": "{{API_TOKEN}}"
+  },
+  "logging": {
+    "level": "{{LOG_LEVEL}}"
+  }
+} 

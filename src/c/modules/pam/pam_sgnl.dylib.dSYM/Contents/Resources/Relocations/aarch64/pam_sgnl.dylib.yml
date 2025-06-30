@@ -1,0 +1,67 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     'modules/pam/pam_sgnl.dylib'
+relocations:
+  - { offset: 0x26, size: 0x8, addend: 0x0, symName: _sgnl_client_create, symObjAddr: 0x0, symBinAddr: 0x770, symSize: 0x310 }
+  - { offset: 0x11EF, size: 0x8, addend: 0x0, symName: _sgnl_client_create, symObjAddr: 0x0, symBinAddr: 0x770, symSize: 0x310 }
+  - { offset: 0x14FF, size: 0x8, addend: 0x0, symName: _sgnl_log_error, symObjAddr: 0x310, symBinAddr: 0xA80, symSize: 0x6C }
+  - { offset: 0x1696, size: 0x8, addend: 0x0, symName: _sgnl_log_debug, symObjAddr: 0x37C, symBinAddr: 0xAEC, symSize: 0x58 }
+  - { offset: 0x1737, size: 0x8, addend: 0x0, symName: _sgnl_client_destroy, symObjAddr: 0x3D4, symBinAddr: 0xB44, symSize: 0xA4 }
+  - { offset: 0x17BC, size: 0x8, addend: 0x0, symName: _sgnl_client_validate, symObjAddr: 0x478, symBinAddr: 0xBE8, symSize: 0x3C }
+  - { offset: 0x17E7, size: 0x8, addend: 0x0, symName: _sgnl_client_get_last_error, symObjAddr: 0x4B4, symBinAddr: 0xC24, symSize: 0x18 }
+  - { offset: 0x1812, size: 0x8, addend: 0x0, symName: _sgnl_client_is_debug_enabled, symObjAddr: 0x4CC, symBinAddr: 0xC3C, symSize: 0xC }
+  - { offset: 0x190B, size: 0x8, addend: 0x0, symName: _sgnl_check_access, symObjAddr: 0x4D8, symBinAddr: 0xC48, symSize: 0x34 }
+  - { offset: 0x19DC, size: 0x8, addend: 0x0, symName: _sgnl_evaluate_access, symObjAddr: 0x50C, symBinAddr: 0xC7C, symSize: 0x380 }
+  - { offset: 0x1E66, size: 0x8, addend: 0x0, symName: _make_http_request, symObjAddr: 0x898, symBinAddr: 0x1008, symSize: 0x304 }
+  - { offset: 0x21E7, size: 0x8, addend: 0x0, symName: _parse_api_response, symObjAddr: 0xBD4, symBinAddr: 0x1344, symSize: 0x1D4 }
+  - { offset: 0x2433, size: 0x8, addend: 0x0, symName: _http_response_free, symObjAddr: 0xB9C, symBinAddr: 0x130C, symSize: 0x38 }
+  - { offset: 0x2477, size: 0x8, addend: 0x0, symName: _sgnl_result_to_string, symObjAddr: 0xDA8, symBinAddr: 0x1518, symSize: 0x24 }
+  - { offset: 0x24A2, size: 0x8, addend: 0x0, symName: _sgnl_access_result_free, symObjAddr: 0x88C, symBinAddr: 0xFFC, symSize: 0xC }
+  - { offset: 0x2676, size: 0x8, addend: 0x0, symName: _sgnl_evaluate_access_batch, symObjAddr: 0xDCC, symBinAddr: 0x153C, symSize: 0xB0 }
+  - { offset: 0x2752, size: 0x8, addend: 0x0, symName: _sgnl_search_assets, symObjAddr: 0xE7C, symBinAddr: 0x15EC, symSize: 0x404 }
+  - { offset: 0x2C41, size: 0x8, addend: 0x0, symName: _sgnl_search_assets_detailed, symObjAddr: 0x1280, symBinAddr: 0x19F0, symSize: 0x7C }
+  - { offset: 0x2CEE, size: 0x8, addend: 0x0, symName: _sgnl_access_result_array_free, symObjAddr: 0x12FC, symBinAddr: 0x1A6C, symSize: 0x60 }
+  - { offset: 0x2DB1, size: 0x8, addend: 0x0, symName: _sgnl_search_result_free, symObjAddr: 0x135C, symBinAddr: 0x1ACC, symSize: 0x74 }
+  - { offset: 0x2E50, size: 0x8, addend: 0x0, symName: _sgnl_asset_ids_free, symObjAddr: 0x13D0, symBinAddr: 0x1B40, symSize: 0x58 }
+  - { offset: 0x2EA7, size: 0x8, addend: 0x0, symName: _sgnl_generate_request_id, symObjAddr: 0x1428, symBinAddr: 0x1B98, symSize: 0x84 }
+  - { offset: 0x2F73, size: 0x8, addend: 0x0, symName: _sgnl_validate_principal_id, symObjAddr: 0x14AC, symBinAddr: 0x1C1C, symSize: 0x24 }
+  - { offset: 0x2FB7, size: 0x8, addend: 0x0, symName: _sgnl_validate_asset_id, symObjAddr: 0x14D0, symBinAddr: 0x1C40, symSize: 0x24 }
+  - { offset: 0x2FFB, size: 0x8, addend: 0x0, symName: _sgnl_get_version, symObjAddr: 0x14F4, symBinAddr: 0x1C64, symSize: 0xC }
+  - { offset: 0x3015, size: 0x8, addend: 0x0, symName: _http_write_callback, symObjAddr: 0x1500, symBinAddr: 0x1C70, symSize: 0x88 }
+  - { offset: 0x322B, size: 0x8, addend: 0x0, symName: _sgnl_config_create, symObjAddr: 0x0, symBinAddr: 0x1CF8, symSize: 0xC }
+  - { offset: 0x3252, size: 0x8, addend: 0x0, symName: _SGNL_CONFIG_DEFAULT_OPTIONS, symObjAddr: 0xCA8, symBinAddr: 0x8158, symSize: 0x0 }
+  - { offset: 0x335B, size: 0x8, addend: 0x0, symName: _sgnl_config_create, symObjAddr: 0x0, symBinAddr: 0x1CF8, symSize: 0xC }
+  - { offset: 0x33C2, size: 0x8, addend: 0x0, symName: _sgnl_config_destroy, symObjAddr: 0xC, symBinAddr: 0x1D04, symSize: 0x50 }
+  - { offset: 0x33FF, size: 0x8, addend: 0x0, symName: _sgnl_config_set_defaults, symObjAddr: 0x5C, symBinAddr: 0x1D54, symSize: 0x7C }
+  - { offset: 0x38A5, size: 0x8, addend: 0x0, symName: _sgnl_config_load, symObjAddr: 0xD8, symBinAddr: 0x1DD0, symSize: 0x778 }
+  - { offset: 0x419C, size: 0x8, addend: 0x0, symName: _sgnl_config_validate, symObjAddr: 0x850, symBinAddr: 0x2548, symSize: 0x54 }
+  - { offset: 0x41B9, size: 0x8, addend: 0x0, symName: _sgnl_config_result_to_string, symObjAddr: 0x8A4, symBinAddr: 0x259C, symSize: 0x24 }
+  - { offset: 0x41E4, size: 0x8, addend: 0x0, symName: _sgnl_config_get_api_url, symObjAddr: 0x8C8, symBinAddr: 0x25C0, symSize: 0x10 }
+  - { offset: 0x420F, size: 0x8, addend: 0x0, symName: _sgnl_config_get_api_token, symObjAddr: 0x8D8, symBinAddr: 0x25D0, symSize: 0x10 }
+  - { offset: 0x423A, size: 0x8, addend: 0x0, symName: _sgnl_config_get_tenant, symObjAddr: 0x8E8, symBinAddr: 0x25E0, symSize: 0x4 }
+  - { offset: 0x4263, size: 0x8, addend: 0x0, symName: _sgnl_config_get_sudo_command_attribute, symObjAddr: 0x8EC, symBinAddr: 0x25E4, symSize: 0x10 }
+  - { offset: 0x428E, size: 0x8, addend: 0x0, symName: _sgnl_config_get_sudo_access_msg, symObjAddr: 0x8FC, symBinAddr: 0x25F4, symSize: 0xC }
+  - { offset: 0x42B9, size: 0x8, addend: 0x0, symName: _sgnl_config_get_user_agent, symObjAddr: 0x908, symBinAddr: 0x2600, symSize: 0x10 }
+  - { offset: 0x42E4, size: 0x8, addend: 0x0, symName: _sgnl_config_get_timeout, symObjAddr: 0x918, symBinAddr: 0x2610, symSize: 0x14 }
+  - { offset: 0x430F, size: 0x8, addend: 0x0, symName: _sgnl_config_get_connect_timeout, symObjAddr: 0x92C, symBinAddr: 0x2624, symSize: 0x14 }
+  - { offset: 0x433A, size: 0x8, addend: 0x0, symName: _sgnl_config_is_valid, symObjAddr: 0x940, symBinAddr: 0x2638, symSize: 0x4C }
+  - { offset: 0x437C, size: 0x8, addend: 0x0, symName: _sgnl_config_is_debug_enabled, symObjAddr: 0x98C, symBinAddr: 0x2684, symSize: 0x18 }
+  - { offset: 0x43A7, size: 0x8, addend: 0x0, symName: _sgnl_config_get_last_error, symObjAddr: 0x9A4, symBinAddr: 0x269C, symSize: 0x10 }
+  - { offset: 0x43FD, size: 0x8, addend: 0x0, symName: _sgnl_log_init, symObjAddr: 0x0, symBinAddr: 0x26AC, symSize: 0x18 }
+  - { offset: 0x4424, size: 0x8, addend: 0x0, symName: _sgnl_logger_config, symObjAddr: 0x350, symBinAddr: 0xC1B0, symSize: 0x0 }
+  - { offset: 0x44E1, size: 0x8, addend: 0x0, symName: _sgnl_log_init, symObjAddr: 0x0, symBinAddr: 0x26AC, symSize: 0x18 }
+  - { offset: 0x4504, size: 0x8, addend: 0x0, symName: _sgnl_log_cleanup, symObjAddr: 0x18, symBinAddr: 0x26C4, symSize: 0x4 }
+  - { offset: 0x4519, size: 0x8, addend: 0x0, symName: _sgnl_log_with_context, symObjAddr: 0x1C, symBinAddr: 0x26C8, symSize: 0x9C }
+  - { offset: 0x4600, size: 0x8, addend: 0x0, symName: _sgnl_log_with_context_v, symObjAddr: 0xB8, symBinAddr: 0x2764, symSize: 0x98 }
+  - { offset: 0x4693, size: 0x8, addend: 0x0, symName: _sgnl_log_level_to_string, symObjAddr: 0x150, symBinAddr: 0x27FC, symSize: 0x24 }
+  - { offset: 0x46BC, size: 0x8, addend: 0x0, symName: _sgnl_log_level_from_string, symObjAddr: 0x174, symBinAddr: 0x2820, symSize: 0x118 }
+  - { offset: 0x47A8, size: 0x8, addend: 0x0, symName: _sgnl_log_level_enabled, symObjAddr: 0x28C, symBinAddr: 0x2938, symSize: 0x14 }
+  - { offset: 0x47D1, size: 0x8, addend: 0x0, symName: _sgnl_request_start, symObjAddr: 0x2A0, symBinAddr: 0x294C, symSize: 0x8 }
+  - { offset: 0x4814, size: 0x8, addend: 0x0, symName: _sgnl_request_end, symObjAddr: 0x2A8, symBinAddr: 0x2954, symSize: 0x4 }
+  - { offset: 0x498D, size: 0x8, addend: 0x0, symName: _sgnl_client, symObjAddr: 0x2910, symBinAddr: 0xC200, symSize: 0x0 }
+  - { offset: 0x4BA9, size: 0x8, addend: 0x0, symName: _pam_sm_acct_mgmt, symObjAddr: 0x0, symBinAddr: 0x2958, symSize: 0x2C8 }
+  - { offset: 0x4FDA, size: 0x8, addend: 0x0, symName: _pam_sm_setcred, symObjAddr: 0x2C8, symBinAddr: 0x2C20, symSize: 0x24 }
+  - { offset: 0x5043, size: 0x8, addend: 0x0, symName: _pam_sm_authenticate, symObjAddr: 0x2EC, symBinAddr: 0x2C44, symSize: 0x24 }
+  - { offset: 0x50AC, size: 0x8, addend: 0x0, symName: _pam_module_cleanup, symObjAddr: 0x310, symBinAddr: 0x2C68, symSize: 0x2C }
+  - { offset: 0x50CF, size: 0x8, addend: 0x0, symName: ___GLOBAL_init_65535, symObjAddr: 0x33C, symBinAddr: 0x2C94, symSize: 0x18 }
+...

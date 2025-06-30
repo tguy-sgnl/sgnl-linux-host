@@ -1,0 +1,8 @@
+{
+  "tenant": "{{TENANT}}",
+  "api_url": "{{API_URL}}",
+  "protected_system_token": "{{API_TOKEN}}",
+  "asset_attribute": "{{ASSET_ATTRIBUTE}}",
+  "debug": {{DEBUG}},
+  "access_msg": {{ACCESS_MSG}}
+} 

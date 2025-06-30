@@ -1,0 +1,300 @@
+// Copyright 2023 SGNL.ai, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package sgnl.adapter.v1;
+
+option go_package = "github.com/sgnl-ai/adapter-framework/api/adapter/v1";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// An identity graph data ingestion adapter.
+service Adapter {
+    // Pulls the next page of objects from a datasource for an entity and its child entities.
+    rpc GetPage(GetPageRequest) returns (GetPageResponse) {}
+}
+
+// A request for a page of data.
+message GetPageRequest {
+    // The datasource the entity belongs to.
+    DatasourceConfig datasource = 1;
+
+    // The entity to return a page of objects from.
+    EntityConfig entity = 2;
+
+    // The maximum number of objects to return from the entity.
+    // The number of child_objects in each object is not limited:
+    // all the objects from child entities are returned in each parent object.
+    int64 page_size = 3;
+
+    // The cursor that identifies the first object of the page to return, as
+    // returned by the last call to GetPage for the entity.
+    // If not set, return the first page for this entity.
+    string cursor = 4;
+}
+
+// A response containing a page of data.
+message GetPageResponse {
+    oneof response {
+        Page success = 1;
+        Error error = 2;
+    }
+}
+
+// The configuration of a datasource to get entity data from.
+message DatasourceConfig {
+    // The unique identifier of the datasource.
+    string id = 1;
+
+    // The adapter-specific configuration for the datasource.
+    // Optional.
+    bytes config = 2;
+
+    // The address of the datasource.
+    // Optional.
+    string address = 3;
+
+    // The credentials to use to authenticate with the datasource.
+    // Optional.
+    DatasourceAuthCredentials auth = 4;
+
+    // The type of the datasource. This can be used to route requests
+    // on adapter deployments supporting multiple datasources.
+    // If the adapter does not support this type, return an error.
+    string type = 5;
+}
+
+// Credentials to use to authenticate with a datasource.
+message DatasourceAuthCredentials {
+    // Basic authentication credentials.
+    message Basic {
+        string username = 1;
+        string password = 2;
+    }
+
+    // The credentials to authenticate with the datasource.
+    // Exactly one of these fields must be set.
+    oneof auth_mechanism {
+        // Basic authentication credentials.
+        Basic basic = 1;
+
+        // Credentials to be sent in an HTTP Authorization header.
+        // Must be prefixed with the scheme, e.g. "Bearer".
+        string http_authorization = 2;
+    }
+}
+
+// The configuration of an entity to get data from.
+message EntityConfig {
+    // The unique identifier of the entity.
+    string id = 1;
+
+    // The adapter-specific name of the entity in the datasource.
+    string external_id = 2;
+
+    // Indicates whether the objects are ordered by ID, i.e. whether the
+    // response must contain objects ordered by monotonically increasing IDs for
+    // the entity.
+    bool ordered = 3;
+
+    // The configuration of the attributes to return for the entity.
+    repeated AttributeConfig attributes = 4;
+
+    // The configuration of the entities that are children of the entity
+    // to return together with the entity.
+    repeated EntityConfig child_entities = 5;
+}
+
+// The configuration of an attribute to ingest.
+message AttributeConfig {
+    // The unique identifier of the attribute.
+    string id = 1;
+
+    // The adapter-specific name of the attribute in the entity.
+    string external_id = 2;
+
+    // The type of the ingested attribute's values.
+    // Determines the field set in the returned AttributeValue for this
+    // attribute.
+    AttributeType type = 3;
+
+    // Indicates whether the attribute contains a list of values vs. a single
+    // value.
+    bool list = 4;
+}
+
+// The type of the values for an attribute.
+enum AttributeType {
+    // Invalid. Must not be used.
+    ATTRIBUTE_TYPE_UNSPECIFIED = 0;
+
+    // Boolean.
+    ATTRIBUTE_TYPE_BOOL = 1;
+
+    // Date or timestamp.
+    ATTRIBUTE_TYPE_DATE_TIME = 2;
+
+    // Double-precision float.
+    ATTRIBUTE_TYPE_DOUBLE = 3;
+
+    // Duration.
+    ATTRIBUTE_TYPE_DURATION = 4;
+
+    // Signed integer.
+    ATTRIBUTE_TYPE_INT64 = 5;
+
+    // String.
+    ATTRIBUTE_TYPE_STRING = 6;
+}
+
+// A page of objects returned from an entity.
+message Page {
+    // The set of objects in the page returned by the datasource for the
+    // requested entity.
+    // Up to page_size objects may be returned in this set.
+    repeated Object objects = 1;
+
+    // The cursor that identifies the first object of the next page.
+    // If not set, this page is the last page for this entity.
+    string next_cursor = 2;
+}
+
+// An object and its child objects.
+message Object {
+    // The object's attributes.
+    repeated Attribute attributes = 1;
+    
+    // The child objects that belong to child entities of
+    // the object's entity.
+    repeated EntityObjects child_objects = 2;
+}
+
+// A set of objects belonging to the same entity.
+message EntityObjects {
+    // The ID of the entity the objects belong to.
+    string entity_id = 1;
+
+    // The set of objects.
+    repeated Object objects = 2;
+}
+
+// An attribute of an object.
+message Attribute {
+    // The unique identifier of the attribute.
+    string id = 1;
+
+    // The value(s) of the attribute.
+    // May contain more than one value only if list is true.
+    // If no value is given, the attribute's value is null.
+    repeated AttributeValue values = 2;
+}
+
+// The value of an attribute.
+message AttributeValue {
+    oneof value {
+        google.protobuf.Empty null_value = 1;
+        bool bool_value = 2;
+        DateTime datetime_value = 3;
+        double double_value = 4;
+        Duration duration_value = 5;
+        int64 int64_value = 6;
+        string string_value = 7;
+    }
+}
+
+// A duration, as the sum of all the fields' durations.
+// Each field may be positive, zero, or negative.
+// The seconds and nanos fields have the same tags as in google.protobuf.Duration for backward compatibility:
+// when only seconds and/or nanos are set in the message, it is marshaled identically to google.protobuf.Duration.
+// The months and days fields are additions supported in Neo4j durations.
+message Duration {
+    // A duration as a number of seconds.
+    int64 seconds = 1;
+    
+    // A duration as a number of nanoseconds.
+    int32 nanos = 2;
+    
+    // A duration as a number of months.
+    int64 months = 3;
+    
+    // A duration as a number of days.
+    int64 days = 4;
+}
+
+// A date or timestamp.
+message DateTime {
+    // The timestamp in the UTC timezone.
+    google.protobuf.Timestamp timestamp = 1;
+
+    // The local timezone as its number of seconds east of UTC.
+    // UTC if zero (default).
+    int32 timezone_offset = 2;
+}
+
+// Error codes indicating why the page request failed.
+enum ErrorCode {
+    // Invalid. Must not be used.
+    ERROR_CODE_UNSPECIFIED = 0;
+
+    // Invalid page request config provided.
+    ERROR_CODE_INVALID_PAGE_REQUEST_CONFIG = 1;
+
+    // Invalid datasource config provided.
+    ERROR_CODE_INVALID_DATASOURCE_CONFIG = 2;
+
+    // Invalid datasource auth provided.
+    ERROR_CODE_INVALID_DATASOURCE_AUTH = 3;
+
+    // Invalid entity config provided.
+    ERROR_CODE_INVALID_ENTITY_CONFIG = 4;
+
+    // Unknown attribute provided in request.
+    ERROR_CODE_UNKNOWN_ATTRIBUTE = 5;
+
+    // Attribute returned from datasource does not match the expected type.
+    ERROR_CODE_INVALID_ATTRIBUTE_TYPE = 6;
+
+    // Datasource permanently unavailable.
+    ERROR_CODE_DATASOURCE_PERMANENTLY_UNAVAILABLE = 7;
+
+    // Datasource temporarily unavailable. Try again later.
+    ERROR_CODE_DATASOURCE_TEMPORARILY_UNAVAILABLE = 8;
+
+    // Failed to authenticate with datasource.
+    ERROR_CODE_DATASOURCE_AUTHENTICATION_FAILED = 9;
+
+    // Datasource failed unexpectedly.
+    ERROR_CODE_DATASOURCE_FAILED = 10;
+
+    // Unexpected failure due to the adapter implementation.
+    ERROR_CODE_INTERNAL = 11;
+
+    // Datasource received too many requests.
+    ERROR_CODE_DATASOURCE_TOO_MANY_REQUESTS = 12;
+}
+
+// An error retrieving a page.
+message Error {
+    // The error message.
+    string message = 1;
+
+    // The error code indicating the cause of the error.
+    ErrorCode code = 2;
+
+    // Recommended minimal duration after which this request may be retried. Optional.
+    google.protobuf.Duration retry_after = 3;
+}

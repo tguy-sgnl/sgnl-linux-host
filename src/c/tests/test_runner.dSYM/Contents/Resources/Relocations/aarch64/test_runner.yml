@@ -1,0 +1,25 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     'tests/test_runner'
+relocations:
+  - { offset: 0x26, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x0, symBinAddr: 0x100000730, symSize: 0x794 }
+  - { offset: 0x65, size: 0x8, addend: 0x0, symName: _test_results, symObjAddr: 0x3798, symBinAddr: 0x100014218, symSize: 0x0 }
+  - { offset: 0xDE, size: 0x8, addend: 0x0, symName: _test_result_count, symObjAddr: 0x38D8, symBinAddr: 0x100014358, symSize: 0x0 }
+  - { offset: 0xF3, size: 0x8, addend: 0x0, symName: _test_suites, symObjAddr: 0xFE8, symBinAddr: 0x100010020, symSize: 0x0 }
+  - { offset: 0x2A0, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x0, symBinAddr: 0x100000730, symSize: 0x794 }
+  - { offset: 0xB50, size: 0x8, addend: 0x0, symName: _test_config_main, symObjAddr: 0x0, symBinAddr: 0x100000EC4, symSize: 0xC4C }
+  - { offset: 0xE37, size: 0x8, addend: 0x0, symName: _test_config_main, symObjAddr: 0x0, symBinAddr: 0x100000EC4, symSize: 0xC4C }
+  - { offset: 0x18C9, size: 0x8, addend: 0x0, symName: _test_logging_main, symObjAddr: 0x0, symBinAddr: 0x100001B10, symSize: 0x101C }
+  - { offset: 0x18F5, size: 0x8, addend: 0x0, symName: _captured_size, symObjAddr: 0x6748, symBinAddr: 0x100015360, symSize: 0x0 }
+  - { offset: 0x1927, size: 0x8, addend: 0x0, symName: _pipe_read_fd, symObjAddr: 0x1D80, symBinAddr: 0x1000141F8, symSize: 0x0 }
+  - { offset: 0x1943, size: 0x8, addend: 0x0, symName: _pipe_write_fd, symObjAddr: 0x1D84, symBinAddr: 0x1000141FC, symSize: 0x0 }
+  - { offset: 0x1958, size: 0x8, addend: 0x0, symName: _original_stdout, symObjAddr: 0x1D88, symBinAddr: 0x100014200, symSize: 0x0 }
+  - { offset: 0x196D, size: 0x8, addend: 0x0, symName: _captured_output, symObjAddr: 0x5748, symBinAddr: 0x100014360, symSize: 0x0 }
+  - { offset: 0x1CB0, size: 0x8, addend: 0x0, symName: _test_logging_main, symObjAddr: 0x0, symBinAddr: 0x100001B10, symSize: 0x101C }
+  - { offset: 0x2AFE, size: 0x8, addend: 0x0, symName: _capture_stdout, symObjAddr: 0x101C, symBinAddr: 0x100002B2C, symSize: 0xD4 }
+  - { offset: 0x2B8B, size: 0x8, addend: 0x0, symName: _restore_stdout, symObjAddr: 0x10F0, symBinAddr: 0x100002C00, symSize: 0xA0 }
+  - { offset: 0x2EF9, size: 0x8, addend: 0x0, symName: _test_error_handling_main, symObjAddr: 0x0, symBinAddr: 0x100002CA0, symSize: 0x8B8 }
+  - { offset: 0x322B, size: 0x8, addend: 0x0, symName: _test_error_handling_main, symObjAddr: 0x0, symBinAddr: 0x100002CA0, symSize: 0x8B8 }
+  - { offset: 0x3BD5, size: 0x8, addend: 0x0, symName: _test_libsgnl_main, symObjAddr: 0x0, symBinAddr: 0x100003558, symSize: 0x18A8 }
+  - { offset: 0x41DF, size: 0x8, addend: 0x0, symName: _test_libsgnl_main, symObjAddr: 0x0, symBinAddr: 0x100003558, symSize: 0x18A8 }
+...

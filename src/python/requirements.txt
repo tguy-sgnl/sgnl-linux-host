@@ -1,0 +1,24 @@
+# SGNL Python Plugin Dependencies
+# The plugin uses built-in Python libraries (http.client, json, ssl, etc.)
+# No external dependencies required for core functionality
+
+# Optional: For enhanced SSL certificate handling (system certificates)
+# certifi>=2022.12.7
+
+# Note: All core functionality uses Python standard library only
+
+# SGNL Sudo Plugin Python Dependencies
+# Minimal requirements for production deployment
+
+# Core dependencies (built into Python)
+# - json (built-in)
+# - http.client (built-in) 
+# - os (built-in)
+# - uuid (built-in)
+
+# No external dependencies required for basic functionality
+# The plugin uses only Python standard library modules
+
+# Development/Testing dependencies (optional)
+# pytest>=7.0.0
+# requests>=2.28.0  # For testing HTTP functionality 

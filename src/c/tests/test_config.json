@@ -1,0 +1,18 @@
+{
+  "api_url": "https://sgnlapis.cloud",
+  "api_token": "test-token-12345",
+  "tenant": "test-tenant",
+  "http": {
+    "timeout": 15,
+    "connect_timeout": 5,
+    "ssl_verify_peer": true,
+    "ssl_verify_host": true,
+    "user_agent": "SGNL-Test/1.0"
+  },
+  "sudo": {
+    "access_msg": true,
+    "command_attribute": "name"
+  },
+  "debug": true,
+  "log_level": "debug"
+} 
