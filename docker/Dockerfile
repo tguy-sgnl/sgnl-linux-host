@@ -76,6 +76,7 @@ RUN cd /app/host-adapter && pip3 install -r requirements.txt
 RUN mkdir -p /etc/sgnl /var/log
 COPY output/for-linux-host/etc-sgnl-config.json /etc/sgnl/config.json
 COPY output/for-linux-host/etc-sudo.conf /etc/sudo.conf
+COPY .adapter_tokens /app/host-adapter/.adapter_tokens
 RUN chmod 644 /etc/sgnl/config.json /etc/sudo.conf && \
     echo "✅ SGNL configuration installed"
 
@@ -95,10 +96,6 @@ RUN chmod +x /app/entrypoint.sh
 # Accept port as build argument (pass with --build-arg GRPC_PORT=9999)
 ARG GRPC_PORT=8082
 EXPOSE ${GRPC_PORT}
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["interactive"] 

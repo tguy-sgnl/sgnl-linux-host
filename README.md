@@ -1,6 +1,6 @@
-# SGNL Linux Host Authentication
+# SGNL Linux Host 
+Examples for 
 
-Safe testing and deployment of SGNL authentication for Linux hosts using PAM and sudo plugins.
 
 ## Quick Start
 

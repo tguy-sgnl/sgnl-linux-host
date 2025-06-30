@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 _current_dir = Path(__file__).parent
 
 # Set tokens path from environment variable or default to tokens.json in current directory
-TOKENS_PATH = os.environ.get('AUTH_TOKENS_PATH', _current_dir / 'tokens.json')
+TOKENS_PATH = os.environ.get('AUTH_TOKENS_PATH', _current_dir / '.adapter_tokens')
 
 # Global variable to cache loaded tokens
 _valid_tokens: Optional[List[str]] = None

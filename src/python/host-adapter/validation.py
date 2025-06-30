@@ -125,7 +125,7 @@ def validate_get_page_request(request: Any, token: Optional[str]) -> Tuple[Datas
         ValidationError: If any part of the request is invalid
     """
     # Validate authentication
-    validate_authentication(token)
+    #validate_authentication(token)
     
     # Extract and validate datasource config
     if not hasattr(request, 'datasource') or not request.datasource:

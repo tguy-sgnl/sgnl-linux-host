@@ -23,7 +23,7 @@ _current_dir = Path(__file__).parent
 PROTO_PATH = _current_dir / 'proto' / 'adapter.proto'
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
