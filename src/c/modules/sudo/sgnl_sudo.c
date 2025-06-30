@@ -275,6 +275,87 @@ static char** build_command_info(const char *command) {
     return command_info;
 }
 
+/**
+ * Build batch access evaluation for sudo command and arguments
+ */
+static sgnl_result_t check_sudo_access_with_args(sgnl_client_t *client, 
+                                                const char *username, 
+                                                int argc, char * const argv[]) {
+    if (!client || !username || !argc || !argv || !argv[0]) {
+        return SGNL_ERROR;
+    }
+    
+    // Count how many queries we need:
+    // 1. sudo access for the command itself
+    // 2. command-specific access for each argument (if any)
+    int query_count = 1; // Always at least 1 for the command itself
+    
+    // Add queries for arguments if they exist
+    for (int i = 1; i < argc; i++) {
+        if (argv[i] && strlen(argv[i]) > 0) {
+            query_count++;
+        }
+    }
+    
+    if (query_count == 1) {
+        // No arguments, just check the command
+        return sgnl_check_access(client, username, argv[0], "sudo");
+    }
+    
+    // Allocate arrays for batch evaluation
+    const char **asset_ids = calloc(query_count, sizeof(char*));
+    const char **actions = calloc(query_count, sizeof(char*));
+    
+    if (!asset_ids || !actions) {
+        if (asset_ids) free(asset_ids);
+        if (actions) free(actions);
+        return SGNL_MEMORY_ERROR;
+    }
+    
+    // Build the queries
+    int query_idx = 0;
+    
+    // First query: sudo access for the command
+    asset_ids[query_idx] = argv[0];
+    actions[query_idx] = "sudo";
+    query_idx++;
+    
+    // Additional queries: command-specific access for each argument
+    for (int i = 1; i < argc && query_idx < query_count; i++) {
+        if (argv[i] && strlen(argv[i]) > 0) {
+            asset_ids[query_idx] = argv[i];
+            actions[query_idx] = argv[0]; // Use command name as action
+            query_idx++;
+        }
+    }
+    
+    // Perform batch evaluation
+    sgnl_access_result_t **results = sgnl_evaluate_access_batch(client, username, 
+                                                              asset_ids, actions, query_count);
+    
+    // Clean up arrays
+    free(asset_ids);
+    free(actions);
+    
+    if (!results) {
+        return SGNL_ERROR;
+    }
+    
+    // Check all results - ALL must be allowed for the overall request to succeed
+    sgnl_result_t overall_result = SGNL_ALLOWED;
+    for (int i = 0; i < query_count && results[i]; i++) {
+        if (results[i]->result != SGNL_ALLOWED) {
+            overall_result = results[i]->result;
+            break;
+        }
+    }
+    
+    // Clean up results
+    sgnl_access_result_array_free(results, query_count);
+    
+    return overall_result;
+}
+
 // ============================================================================
 // Sudo Plugin Interface Implementation
 // ============================================================================
@@ -373,13 +454,22 @@ static int policy_check(int argc, char * const argv[], char *env_add[],
         return SUDO_RC_ERROR;
     }
     
-    // Check access using consolidated library
-    sgnl_result_t result = sgnl_check_access(plugin_state.sgnl_client, 
-                                           username, argv[0], "execute");
+    // Check access using batch evaluation for command and arguments
+    sgnl_result_t result = check_sudo_access_with_args(plugin_state.sgnl_client, 
+                                                      username, argc, argv);
     
     if (result != SGNL_ALLOWED) {
-        sudo_log(SUDO_CONV_ERROR_MSG, "SGNL: Access denied for %s to run %s: %s\n", 
-                 username, argv[0], sgnl_result_to_string(result));
+        // Build a more descriptive error message
+        char command_line[1024] = "";
+        int pos = 0;
+        for (int i = 0; i < argc && pos < sizeof(command_line) - 1; i++) {
+            int written = snprintf(command_line + pos, sizeof(command_line) - pos, 
+                                 "%s%s", i > 0 ? " " : "", argv[i]);
+            if (written > 0) pos += written;
+        }
+        
+        sudo_log(SUDO_CONV_ERROR_MSG, "SGNL: Access denied for %s to run '%s': %s\n", 
+                 username, command_line, sgnl_result_to_string(result));
         if (errstr) *errstr = "Access denied by SGNL policy";
         return SUDO_RC_REJECT;
     }

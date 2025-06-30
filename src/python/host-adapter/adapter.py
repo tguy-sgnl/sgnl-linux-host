@@ -15,7 +15,7 @@ import adapter_pb2_grpc
 
 # Import our local modules
 from config import get_adapter_config
-from validation import validate_get_page_request, ValidationError, create_error_response_from_exception
+from validation import AuthenticatedServicerMixin, validate_get_page_request, ValidationError, create_error_response_from_exception
 from datasource import get_users, get_groups, get_executables, get_pam_config, get_sudoers_config, get_host_info
 
 # Get current directory and set up paths
@@ -23,12 +23,19 @@ _current_dir = Path(__file__).parent
 PROTO_PATH = _current_dir / 'proto' / 'adapter.proto'
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class AdapterServicer(adapter_pb2_grpc.AdapterServicer):
+class AdapterServicer(AuthenticatedServicerMixin, adapter_pb2_grpc.AdapterServicer):
     """gRPC service implementation for the SGNL adapter."""
+    
+    def _create_auth_error_response(self, validation_error: ValidationError):
+        """Create an authentication error response."""
+        error_response = adapter_pb2.GetPageResponse()
+        error_response.error.message = validation_error.message
+        error_response.error.code = adapter_pb2.ERROR_CODE_INTERNAL
+        return error_response
     
     async def GetPage(self, request, context):
         """
@@ -44,28 +51,9 @@ class AdapterServicer(adapter_pb2_grpc.AdapterServicer):
         try:
             logger.info(f"GetPage request received for entity: {request.entity.external_id}")
             
-            # Extract client authentication token from Authorization header
-            client_token = None
-            metadata = dict(context.invocation_metadata())
-            logger.debug(f"Request metadata keys: {list(metadata.keys())}")
-            
-            # Client authentication via Authorization header (Bearer token)
-            auth_header = metadata.get('authorization') or metadata.get('Authorization')
-            if auth_header and auth_header.startswith('Bearer '):
-                client_token = auth_header[7:]  # Remove 'Bearer ' prefix
-                logger.debug(f"Extracted client Bearer token from authorization header")
-            else:
-                logger.warning(f"No Authorization header found. Available keys: {list(metadata.keys())}")
-            
-            # The 'token' metadata key would be used for adapter->datasource authentication
-            # but since this is a local system adapter, we don't need external datasource auth
-            datasource_token = metadata.get('token')
-            if datasource_token:
-                logger.debug(f"Datasource token provided (not used for local system data)")
-            
             # Validate request using validation module
             try:
-                datasource_config, entity_config, page_size, cursor = validate_get_page_request(request, client_token)
+                datasource_config, entity_config, page_size, cursor = validate_get_page_request(request)
             except ValidationError as ve:
                 logger.warning(f"Validation failed: {ve.message}")
                 error_response = adapter_pb2.GetPageResponse()
@@ -213,21 +201,9 @@ class AdapterServicer(adapter_pb2_grpc.AdapterServicer):
 
 
 async def serve():
-    """Start the gRPC server."""
-    # Import auth module to trigger token loading/generation
-    from auth import get_valid_tokens
-    
+    """Start the gRPC server."""   
     # Get adapter configuration
     adapter_config = get_adapter_config()
-    
-    # Load/generate authentication tokens and log them for reference
-    try:
-        valid_tokens = get_valid_tokens()
-        logger.info(f"Authentication: {len(valid_tokens)} valid token(s) loaded")
-        if valid_tokens:
-            logger.info(f"First valid token: {valid_tokens[0]}")
-    except Exception as e:
-        logger.error(f"Failed to load authentication tokens: {e}")
     
     server = aio.server(futures.ThreadPoolExecutor(max_workers=10))
     

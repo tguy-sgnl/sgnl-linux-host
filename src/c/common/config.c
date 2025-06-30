@@ -160,7 +160,7 @@ sgnl_config_result_t sgnl_config_load(sgnl_config_t *config, const sgnl_config_o
     }
     
     config->initialized = true;
-    SGNL_LOG_INFO(&log_ctx, "Configuration loaded successfully for module: %s", opts->module_name ? opts->module_name : "default");
+    SGNL_LOG_DEBUG(&log_ctx, "Configuration loaded successfully for module: %s", opts->module_name ? opts->module_name : "default");
     return SGNL_CONFIG_OK;
 }
 

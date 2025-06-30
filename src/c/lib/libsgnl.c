@@ -421,7 +421,7 @@ sgnl_client_t* sgnl_client_create(const sgnl_client_config_t *config) {
     sgnl_log_debug(client, "Config: tenant=%s, api_url=%s", 
                    client->tenant, client->api_url);
     
-    SGNL_LOG_INFO(&log_ctx, "SGNL client created and initialized successfully");
+    SGNL_LOG_DEBUG(&log_ctx, "SGNL client created and initialized successfully");
     
     return client;
 }
@@ -592,8 +592,7 @@ sgnl_access_result_t** sgnl_evaluate_access_batch(sgnl_client_t *client,
                                                   const char **asset_ids,
                                                   const char **actions,
                                                   int query_count) {
-    // Simplified implementation - just call individual evaluations
-    if (!client || !principal_id || !asset_ids || query_count <= 0) {
+    if (!client || !client->initialized || !principal_id || !asset_ids || query_count <= 0) {
         return NULL;
     }
     
@@ -602,10 +601,204 @@ sgnl_access_result_t** sgnl_evaluate_access_batch(sgnl_client_t *client,
         return NULL;
     }
     
+    // Initialize all results to NULL
     for (int i = 0; i < query_count; i++) {
-        const char *action = actions ? actions[i] : NULL;
-        results[i] = sgnl_evaluate_access(client, principal_id, asset_ids[i], action);
+        results[i] = NULL;
     }
+    
+    // Generate request ID
+    strcpy(client->last_request_id, generate_request_id_internal());
+    
+    sgnl_log_debug(client, "Batch evaluating access: principal=%s, queries=%d", 
+                   principal_id, query_count);
+    
+    // Create JSON request with multiple queries
+    json_object *request = json_object_new_object();
+    json_object *principal = json_object_new_object();
+    json_object *queries = json_object_new_array();
+    
+    if (!request || !principal || !queries) {
+        if (request) json_object_put(request);
+        if (principal) json_object_put(principal);
+        if (queries) json_object_put(queries);
+        for (int i = 0; i < query_count; i++) {
+            if (results[i]) sgnl_access_result_free(results[i]);
+        }
+        free(results);
+        return NULL;
+    }
+    
+    // Build request
+    json_object_object_add(principal, "id", json_object_new_string(principal_id));
+    json_object_object_add(request, "principal", principal);
+    
+    // Add each query
+    for (int i = 0; i < query_count; i++) {
+        json_object *query = json_object_new_object();
+        if (!query) {
+            json_object_put(request);
+            for (int j = 0; j < query_count; j++) {
+                if (results[j]) sgnl_access_result_free(results[j]);
+            }
+            free(results);
+            return NULL;
+        }
+        
+        if (asset_ids[i]) {
+            json_object_object_add(query, "assetId", json_object_new_string(asset_ids[i]));
+        }
+        
+        const char *action = actions ? actions[i] : "execute";
+        json_object_object_add(query, "action", json_object_new_string(action));
+        
+        json_object_array_add(queries, query);
+    }
+    
+    json_object_object_add(request, "queries", queries);
+    
+    const char *json_payload = json_object_to_json_string(request);
+    
+    sgnl_log_debug(client, "Batch request payload: %s", json_payload);
+    
+    // Make HTTP request
+    http_response_t *response = make_http_request(client, "/access/v2/evaluations", json_payload);
+    
+    json_object_put(request);
+    
+    if (!response) {
+        sgnl_log_error(client, "HTTP request failed for batch evaluation");
+        for (int i = 0; i < query_count; i++) {
+            if (results[i]) sgnl_access_result_free(results[i]);
+        }
+        free(results);
+        return NULL;
+    }
+    
+    // Handle HTTP errors
+    if (response->status_code != 200) {
+        sgnl_log_error(client, "HTTP request failed with status %ld for batch evaluation", 
+                      response->status_code);
+        http_response_free(response);
+        for (int i = 0; i < query_count; i++) {
+            if (results[i]) sgnl_access_result_free(results[i]);
+        }
+        free(results);
+        return NULL;
+    }
+    
+    // Parse batch response
+    json_object *root = json_tokener_parse(response->data);
+    if (!root) {
+        sgnl_log_error(client, "Failed to parse JSON response for batch evaluation");
+        http_response_free(response);
+        for (int i = 0; i < query_count; i++) {
+            if (results[i]) sgnl_access_result_free(results[i]);
+        }
+        free(results);
+        return NULL;
+    }
+    
+    // Get decisions array
+    json_object *decisions;
+    if (!json_object_object_get_ex(root, "decisions", &decisions) ||
+        !json_object_is_type(decisions, json_type_array)) {
+        sgnl_log_error(client, "No decisions array in batch response");
+        json_object_put(root);
+        http_response_free(response);
+        for (int i = 0; i < query_count; i++) {
+            if (results[i]) sgnl_access_result_free(results[i]);
+        }
+        free(results);
+        return NULL;
+    }
+    
+    int decision_count = json_object_array_length(decisions);
+    sgnl_log_debug(client, "Batch response contains %d decisions", decision_count);
+    
+    // Process each decision and create corresponding result
+    for (int i = 0; i < decision_count && i < query_count; i++) {
+        json_object *decision_obj = json_object_array_get_idx(decisions, i);
+        if (!decision_obj) continue;
+        
+        // Create result object
+        results[i] = calloc(1, sizeof(sgnl_access_result_t));
+        if (!results[i]) continue;
+        
+        // Initialize result
+        results[i]->result = SGNL_ERROR;
+        results[i]->timestamp = time(NULL);
+        strncpy(results[i]->principal_id, principal_id, sizeof(results[i]->principal_id) - 1);
+        results[i]->principal_id[sizeof(results[i]->principal_id) - 1] = '\0';
+        strncpy(results[i]->request_id, client->last_request_id, sizeof(results[i]->request_id) - 1);
+        results[i]->request_id[sizeof(results[i]->request_id) - 1] = '\0';
+        
+        if (asset_ids[i]) {
+            strncpy(results[i]->asset_id, asset_ids[i], sizeof(results[i]->asset_id) - 1);
+            results[i]->asset_id[sizeof(results[i]->asset_id) - 1] = '\0';
+        }
+        
+        const char *action = actions ? actions[i] : "execute";
+        strncpy(results[i]->action, action, sizeof(results[i]->action) - 1);
+        results[i]->action[sizeof(results[i]->action) - 1] = '\0';
+        
+        // Parse decision
+        json_object *decision_value;
+        if (json_object_object_get_ex(decision_obj, "decision", &decision_value)) {
+            const char *decision_str = json_object_get_string(decision_value);
+            if (decision_str) {
+                strncpy(results[i]->decision, decision_str, sizeof(results[i]->decision) - 1);
+                results[i]->decision[sizeof(results[i]->decision) - 1] = '\0';
+                
+                if (strcmp(decision_str, "Allow") == 0) {
+                    results[i]->result = SGNL_ALLOWED;
+                } else {
+                    results[i]->result = SGNL_DENIED;
+                }
+            }
+        }
+        
+        // Extract reason if available
+        json_object *reason_value;
+        if (json_object_object_get_ex(decision_obj, "reason", &reason_value)) {
+            const char *reason_str = json_object_get_string(reason_value);
+            if (reason_str) {
+                strncpy(results[i]->reason, reason_str, sizeof(results[i]->reason) - 1);
+                results[i]->reason[sizeof(results[i]->reason) - 1] = '\0';
+            }
+        }
+        
+        sgnl_log_debug(client, "Batch result[%d]: %s -> %s", i, 
+                      asset_ids[i] ? asset_ids[i] : "N/A", 
+                      sgnl_result_to_string(results[i]->result));
+    }
+    
+    // For any remaining slots, create default denied results
+    for (int i = decision_count; i < query_count; i++) {
+        results[i] = calloc(1, sizeof(sgnl_access_result_t));
+        if (results[i]) {
+            results[i]->result = SGNL_DENIED;
+            results[i]->timestamp = time(NULL);
+            strncpy(results[i]->principal_id, principal_id, sizeof(results[i]->principal_id) - 1);
+            results[i]->principal_id[sizeof(results[i]->principal_id) - 1] = '\0';
+            strncpy(results[i]->request_id, client->last_request_id, sizeof(results[i]->request_id) - 1);
+            results[i]->request_id[sizeof(results[i]->request_id) - 1] = '\0';
+            strcpy(results[i]->decision, "Deny");
+            
+            if (asset_ids[i]) {
+                strncpy(results[i]->asset_id, asset_ids[i], sizeof(results[i]->asset_id) - 1);
+                results[i]->asset_id[sizeof(results[i]->asset_id) - 1] = '\0';
+            }
+            
+            const char *action = actions ? actions[i] : "execute";
+            strncpy(results[i]->action, action, sizeof(results[i]->action) - 1);
+            results[i]->action[sizeof(results[i]->action) - 1] = '\0';
+        }
+    }
+    
+    json_object_put(root);
+    http_response_free(response);
+    
+    sgnl_log_debug(client, "Batch access evaluation completed");
     
     return results;
 }
