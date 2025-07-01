@@ -62,6 +62,7 @@ void sgnl_config_set_defaults(sgnl_config_t *config, const char *module_name) {
     // Set default sudo settings
     config->sudo.access_msg = true;
     strcpy(config->sudo.command_attribute, "id");  // Default to using asset ID
+    config->sudo.batch_evaluation = false;  // Default to single query evaluation
 }
 
 // Forward declaration
@@ -204,6 +205,16 @@ static void apply_config_values(sgnl_config_t *config, json_object *root) {
         if (json_object_object_get_ex(sudo_obj, "command_attribute", &value) && json_object_is_type(value, json_type_string)) {
             SGNL_SAFE_STRNCPY(config->sudo.command_attribute, json_object_get_string(value), sizeof(config->sudo.command_attribute));
         }
+        
+        // Batch evaluation setting
+        if (json_object_object_get_ex(sudo_obj, "batch_evaluation", &value)) {
+            if (json_object_is_type(value, json_type_boolean)) {
+                config->sudo.batch_evaluation = json_object_get_boolean(value);
+            } else if (json_object_is_type(value, json_type_string)) {
+                const char *batch_str = json_object_get_string(value);
+                config->sudo.batch_evaluation = (strcmp(batch_str, "true") == 0 || strcmp(batch_str, "1") == 0);
+            }
+        }
     }
     
     // HTTP settings (optional)
@@ -293,6 +304,10 @@ const char* sgnl_config_get_sudo_command_attribute(const sgnl_config_t *config) 
 
 bool sgnl_config_get_sudo_access_msg(const sgnl_config_t *config) {
     return config ? config->sudo.access_msg : false;
+}
+
+bool sgnl_config_get_sudo_batch_evaluation(const sgnl_config_t *config) {
+    return config ? config->sudo.batch_evaluation : false;
 }
 
 const char* sgnl_config_get_user_agent(const sgnl_config_t *config) {

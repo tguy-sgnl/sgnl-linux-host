@@ -1,0 +1,31 @@
+{
+    "condition": {
+      "or": [
+        {
+          "predicate": {
+            "lhs": {
+              "queryFieldName": "action"
+            },
+            "op": "RegexEqualTo",
+            "rhs": {
+              "string": "^sudo:.*"
+            }
+          }
+        },
+        {
+          "predicate": {
+            "lhs": {
+              "queryFieldName": "action"
+            },
+            "op": "EqualTo",
+            "rhs": {
+              "string": "sudo"
+            }
+          }
+        }
+      ]
+    },
+    "createdBy": "79e985a1-41db-4af5-90a0-ca194896e13d",
+    "description": "Any sudo command",
+    "snippetId": "5eb8118e-07e2-4457-9e13-32b56e2961d5"
+  }

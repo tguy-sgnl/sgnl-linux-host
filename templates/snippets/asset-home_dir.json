@@ -1,0 +1,24 @@
+{
+  "condition": {
+    "predicate": {
+      "lhs": {
+        "queryFieldName": "assetId"
+      },
+      "op": "StartsWith",
+      "rhs": {
+        "attributeId": "054fad3f-b44c-4ea7-b979-070658f8f726",
+        "nodeName": "user"
+      }
+    }
+  },
+  "createdBy": "79e985a1-41db-4af5-90a0-ca194896e13d",
+  "description": "",
+  "nodes": [
+    {
+      "entityId": "c2df0070-7d79-4c87-b16b-a4a14ffe7f12",
+      "nodeName": "user",
+      "queryFieldName": "principalId"
+    }
+  ],
+  "snippetId": "05a8eeb9-1a1c-4093-85db-6dab6679995b"
+}

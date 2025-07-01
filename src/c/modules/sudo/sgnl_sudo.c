@@ -36,6 +36,7 @@ typedef struct {
     bool debug_enabled;
     bool access_msg_enabled;
     char command_attribute[64];  // Which SGNL response attribute to use for command names
+    bool batch_evaluation;       // Use batch evaluation for command + arguments
 } sudo_plugin_settings_t;
 
 // Plugin state
@@ -58,6 +59,7 @@ static bool load_sudo_settings(sudo_plugin_settings_t *settings) {
     settings->debug_enabled = false;
     settings->access_msg_enabled = true;  // Default to showing success messages
     strcpy(settings->command_attribute, "id");  // Default to using asset ID
+    settings->batch_evaluation = false;  // Default to single query evaluation
     
     // Load configuration using common config system
     sgnl_config_t *config = sgnl_config_create();
@@ -84,6 +86,7 @@ static bool load_sudo_settings(sudo_plugin_settings_t *settings) {
     // Extract sudo-specific settings
     settings->debug_enabled = sgnl_config_is_debug_enabled(config);
     settings->access_msg_enabled = sgnl_config_get_sudo_access_msg(config);
+    settings->batch_evaluation = sgnl_config_get_sudo_batch_evaluation(config);
     const char *cmd_attr = sgnl_config_get_sudo_command_attribute(config);
     if (cmd_attr) {
         strncpy(settings->command_attribute, cmd_attr, sizeof(settings->command_attribute) - 1);
@@ -139,7 +142,7 @@ static void show_allowed_commands(const char *username) {
     // Search for allowed assets
     int asset_count = 0;
     char **allowed_commands = sgnl_search_assets(plugin_state.sgnl_client, 
-                                               username, "execute", &asset_count);
+                                               username, "sudo_list", &asset_count);
     
     if (allowed_commands && asset_count > 0) {
         sudo_log(SUDO_CONV_INFO_MSG, "Allowed commands:\n");
@@ -276,6 +279,49 @@ static char** build_command_info(const char *command) {
 }
 
 /**
+ * Build single access evaluation for sudo command with concatenated arguments
+ */
+static sgnl_result_t check_sudo_access_single(sgnl_client_t *client, 
+                                             const char *username, 
+                                             int argc, char * const argv[]) {
+    if (!client || !username || !argc || !argv || !argv[0]) {
+        return SGNL_ERROR;
+    }
+    
+    // Build action string: "sudo:${command}"
+    char action_buffer[256];
+    snprintf(action_buffer, sizeof(action_buffer), "sudo:%s", argv[0]);
+    
+    // Build asset ID string: concatenate all arguments
+    char asset_buffer[2048] = "";
+    int pos = 0;
+    
+    for (int i = 1; i < argc && pos < sizeof(asset_buffer) - 1; i++) {
+        if (argv[i]) {
+            int written = snprintf(asset_buffer + pos, sizeof(asset_buffer) - pos, 
+                                 "%s%s", i > 1 ? " " : "", argv[i]);
+            if (written > 0) pos += written;
+        }
+    }
+    
+    // If no arguments, use current working directory
+    if (pos == 0) {
+        char *cwd = getcwd(NULL, 0);
+        if (cwd) {
+            strncpy(asset_buffer, cwd, sizeof(asset_buffer) - 1);
+            asset_buffer[sizeof(asset_buffer) - 1] = '\0';
+            free(cwd);
+        } else {
+            // Fallback to command name if getcwd fails
+            strncpy(asset_buffer, argv[0], sizeof(asset_buffer) - 1);
+            asset_buffer[sizeof(asset_buffer) - 1] = '\0';
+        }
+    }
+    
+    return sgnl_check_access(client, username, asset_buffer, action_buffer);
+}
+
+/**
  * Build batch access evaluation for sudo command and arguments
  */
 static sgnl_result_t check_sudo_access_with_args(sgnl_client_t *client, 
@@ -305,10 +351,12 @@ static sgnl_result_t check_sudo_access_with_args(sgnl_client_t *client,
     // Allocate arrays for batch evaluation
     const char **asset_ids = calloc(query_count, sizeof(char*));
     const char **actions = calloc(query_count, sizeof(char*));
+    char **action_strings = calloc(query_count, sizeof(char*)); // Track allocated strings
     
-    if (!asset_ids || !actions) {
+    if (!asset_ids || !actions || !action_strings) {
         if (asset_ids) free(asset_ids);
         if (actions) free(actions);
+        if (action_strings) free(action_strings);
         return SGNL_MEMORY_ERROR;
     }
     
@@ -327,7 +375,8 @@ static sgnl_result_t check_sudo_access_with_args(sgnl_client_t *client,
             // Create action string with 'sudo:' prefix
             char action_buffer[256];
             snprintf(action_buffer, sizeof(action_buffer), "sudo:%s", argv[0]);
-            actions[query_idx] = strdup(action_buffer); // Use command name as action with sudo: prefix
+            action_strings[query_idx] = strdup(action_buffer); // Track for cleanup
+            actions[query_idx] = action_strings[query_idx];
             query_idx++;
         }
     }
@@ -339,6 +388,16 @@ static sgnl_result_t check_sudo_access_with_args(sgnl_client_t *client,
     // Clean up arrays
     free(asset_ids);
     free(actions);
+    
+    // Free allocated action strings
+    if (action_strings) {
+        for (int i = 0; i < query_count; i++) {
+            if (action_strings[i]) {
+                free(action_strings[i]);
+            }
+        }
+        free(action_strings);
+    }
     
     if (!results) {
         return SGNL_ERROR;
@@ -457,9 +516,15 @@ static int policy_check(int argc, char * const argv[], char *env_add[],
         return SUDO_RC_ERROR;
     }
     
-    // Check access using batch evaluation for command and arguments
-    sgnl_result_t result = check_sudo_access_with_args(plugin_state.sgnl_client, 
-                                                      username, argc, argv);
+    // Check access using either single or batch evaluation based on configuration
+    sgnl_result_t result;
+    if (plugin_state.config.batch_evaluation) {
+        result = check_sudo_access_with_args(plugin_state.sgnl_client, 
+                                           username, argc, argv);
+    } else {
+        result = check_sudo_access_single(plugin_state.sgnl_client, 
+                                        username, argc, argv);
+    }
     
     if (result != SGNL_ALLOWED) {
         // Build a more descriptive error message
@@ -517,7 +582,7 @@ static int policy_list(int argc, char * const argv[], int verbose,
     if (argc > 0 && argv[0]) {
         // Check specific command
         sgnl_result_t result = sgnl_check_access(plugin_state.sgnl_client, 
-                                               username, argv[0], "execute");
+                                               username, argv[0], "sudo_list");
         
         const char *as_user_text = list_user ? list_user : "";
         if (result == SGNL_ALLOWED) {
@@ -631,4 +696,5 @@ sudo_dso_public struct policy_plugin sgnl_policy = {
     NULL, /* deregister_hooks */
     NULL  /* event_alloc() filled in by sudo */
 };
+
 

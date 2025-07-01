@@ -1,0 +1,16 @@
+{
+    "condition": {
+      "predicate": {
+        "lhs": {
+          "queryFieldName": "action"
+        },
+        "op": "EqualTo",
+        "rhs": {
+          "string": "sudo_list"
+        }
+      }
+    },
+    "createdBy": "79e985a1-41db-4af5-90a0-ca194896e13d",
+    "description": "",
+    "snippetId": "af01ebc5-826e-461c-af5e-60cf05f29861"
+  }

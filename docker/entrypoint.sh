@@ -34,6 +34,128 @@ create_user() {
     fi
 }
 
+# Function to create locked-down user
+create_locked_user() {
+    local username="$1"
+    if [ -z "$username" ]; then
+        error "Username required for lockdown"
+        return 1
+    fi
+    
+    log "Creating locked-down user: $username"
+    
+    # Create user first
+    create_user "$username"
+    
+    # Apply lockdown
+    /usr/local/bin/lockdown.sh "$username"
+    
+    log "✅ User $username is now locked down"
+    log "🔒 Restrictions applied:"
+    log "   - Restricted shell with limited commands"
+    log "   - Confined to home directory only"
+    log "   - No directory traversal allowed"
+    log "   - No network access"
+    log "   - Resource limits applied"
+    log "   - Activity logging enabled"
+}
+
+# Function to test lockdown restrictions
+test_lockdown() {
+    local username="${1:-$TEST_USERNAME}"
+    log "Testing lockdown restrictions for user: $username"
+    
+    # Ensure user exists and is locked down
+    if ! id "$username" &>/dev/null; then
+        create_locked_user "$username"
+    fi
+    
+    log "🧪 Running lockdown tests..."
+    
+    # Test 1: Basic functionality
+    log "Test 1: Basic file operations..."
+    su - "$username" -c "pwd; ls -la; echo 'test' > testfile.txt; cat testfile.txt; rm testfile.txt" || warn "Some operations failed (expected)"
+    
+    # Test 2: Directory traversal
+    log "Test 2: Directory traversal prevention..."
+    su - "$username" -c "cd /etc 2>&1" && error "Directory traversal should be blocked" || log "✅ Directory traversal blocked"
+    
+    # Test 3: Dangerous commands
+    log "Test 3: Dangerous command prevention..."
+    su - "$username" -c "sudo whoami 2>&1" && error "Sudo should be blocked" || log "✅ Sudo blocked"
+    
+    # Test 4: Network access
+    log "Test 4: Network access prevention..."
+    su - "$username" -c "ping -c1 8.8.8.8 2>&1" && error "Network access should be blocked" || log "✅ Network access blocked"
+    
+    # Test 5: Command restrictions
+    log "Test 5: Command restrictions..."
+    su - "$username" -c "which bash 2>&1" && error "System commands should be restricted" || log "✅ System commands restricted"
+    
+    log "✅ Lockdown tests completed"
+}
+
+# Function to show lockdown status
+lockdown_status() {
+    local username="${1:-$TEST_USERNAME}"
+    if ! id "$username" &>/dev/null; then
+        warn "User $username does not exist"
+        return 1
+    fi
+    
+    log "Lockdown status for user: $username"
+    echo "=================================="
+    
+    # Check shell
+    local shell=$(grep "^$username:" /etc/passwd | cut -d: -f7)
+    if [[ "$shell" == *"lockdown-shell"* ]]; then
+        log "✅ Restricted shell: $shell"
+    else
+        warn "❌ Standard shell: $shell"
+    fi
+    
+    # Check resource limits
+    if grep -q "^$username" /etc/security/limits.conf; then
+        log "✅ Resource limits applied"
+    else
+        warn "❌ No resource limits found"
+    fi
+    
+    # Check SSH access
+    if grep -q "DenyUsers.*$username" /etc/ssh/sshd_config* 2>/dev/null; then
+        log "✅ SSH access denied"
+    else
+        warn "❌ SSH access not explicitly denied"
+    fi
+    
+    # Check monitoring
+    if [ -f "/var/log/restricted-users.log" ]; then
+        log "✅ Activity logging enabled"
+        echo "Recent activity:"
+        tail -5 /var/log/restricted-users.log 2>/dev/null || echo "No recent activity"
+    else
+        warn "❌ Activity logging not found"
+    fi
+}
+
+# Function to monitor locked user
+monitor_locked_user() {
+    local username="${1:-$TEST_USERNAME}"
+    if ! id "$username" &>/dev/null; then
+        error "User $username does not exist"
+        return 1
+    fi
+    
+    log "Monitoring locked user: $username"
+    log "Press Ctrl+C to stop monitoring"
+    
+    if [ -f "/var/log/restricted-users.log" ]; then
+        tail -f /var/log/restricted-users.log | grep "$username"
+    else
+        warn "No activity log found"
+    fi
+}
+
 # Function to setup configuration
 setup_config() {
     log "SGNL configuration already installed from build"
@@ -139,6 +261,17 @@ shell_as() {
     exec su - "$username"
 }
 
+# Function to run interactive shell as locked user
+shell_as_locked() {
+    local username="${1:-$TEST_USERNAME}"
+    if ! id "$username" &>/dev/null; then
+        create_locked_user "$username"
+    fi
+    log "Starting restricted shell as locked user: $username"
+    log "This user has severe restrictions - only basic file operations allowed"
+    exec su - "$username"
+}
+
 # Cleanup function
 cleanup() {
     log "Shutting down SGNL services..."
@@ -159,11 +292,14 @@ case "${1:-interactive}" in
         log "Container ready for testing!"
         log ""
         log "Available commands:"
-        log "  docker exec <container> test-as [username]    - Test sudo with SGNL"
-        log "  docker exec <container> shell-as [username]   - Interactive shell"
-        log "  docker exec <container> status                - Show service status"
-        log "  docker exec <container> logs                  - Show adapter logs"
-        log "  docker exec <container> restart               - Restart services"
+        log "  docker exec <container> test-as [username]        - Test sudo with SGNL"
+        log "  docker exec <container> shell-as [username]       - Interactive shell"
+        log "  docker exec <container> lockdown [username]       - Create locked user"
+        log "  docker exec <container> test-lockdown [username]  - Test lockdown"
+        log "  docker exec <container> shell-locked [username]   - Shell as locked user"
+        log "  docker exec <container> status                    - Show service status"
+        log "  docker exec <container> logs                      - Show adapter logs"
+        log "  docker exec <container> restart                   - Restart services"
         log ""
         
         # Keep container running
@@ -184,14 +320,19 @@ case "${1:-interactive}" in
         log "Container ready for testing!"
         log ""
         log "Available commands:"
-        log "  test-as [username]    - Test sudo with SGNL"
-        log "  shell-as [username]   - Switch to user shell"
-        log "  status                - Show service status"
-        log "  logs                  - Show adapter logs"
-        log "  restart               - Restart services"
+        log "  test-as [username]        - Test sudo with SGNL"
+        log "  shell-as [username]       - Switch to user shell"
+        log "  lockdown [username]       - Create locked-down user"
+        log "  test-lockdown [username]  - Test lockdown restrictions"
+        log "  shell-locked [username]   - Shell as locked user"
+        log "  lockdown-status [username] - Show lockdown status"
+        log "  monitor-locked [username] - Monitor locked user activity"
+        log "  status                    - Show service status"
+        log "  logs                      - Show adapter logs"
+        log "  restart                   - Restart services"
         log ""
         log "Starting interactive shell as root..."
-        log "Use 'test-as alice' or 'shell-as alice' to test with a user"
+        log "Use 'lockdown alice' to create a locked-down user"
         
         # Create wrapper scripts for easy access to functions
         cat > /usr/local/bin/test-as << 'EOF'
@@ -205,6 +346,36 @@ EOF
 /app/entrypoint.sh shell-as "$@"
 EOF
         chmod +x /usr/local/bin/shell-as
+        
+        cat > /usr/local/bin/lockdown << 'EOF'
+#!/bin/bash
+/app/entrypoint.sh lockdown "$@"
+EOF
+        chmod +x /usr/local/bin/lockdown
+        
+        cat > /usr/local/bin/test-lockdown << 'EOF'
+#!/bin/bash
+/app/entrypoint.sh test-lockdown "$@"
+EOF
+        chmod +x /usr/local/bin/test-lockdown
+        
+        cat > /usr/local/bin/shell-locked << 'EOF'
+#!/bin/bash
+/app/entrypoint.sh shell-locked "$@"
+EOF
+        chmod +x /usr/local/bin/shell-locked
+        
+        cat > /usr/local/bin/lockdown-status << 'EOF'
+#!/bin/bash
+/app/entrypoint.sh lockdown-status "$@"
+EOF
+        chmod +x /usr/local/bin/lockdown-status
+        
+        cat > /usr/local/bin/monitor-locked << 'EOF'
+#!/bin/bash
+/app/entrypoint.sh monitor-locked "$@"
+EOF
+        chmod +x /usr/local/bin/monitor-locked
         
         cat > /usr/local/bin/status << 'EOF'
 #!/bin/bash
@@ -245,6 +416,26 @@ EOF
         shell_as "$2"
         ;;
     
+    "lockdown")
+        create_locked_user "$2"
+        ;;
+    
+    "test-lockdown")
+        test_lockdown "$2"
+        ;;
+    
+    "shell-locked")
+        shell_as_locked "$2"
+        ;;
+    
+    "lockdown-status")
+        lockdown_status "$2"
+        ;;
+    
+    "monitor-locked")
+        monitor_locked_user "$2"
+        ;;
+    
     "status")
         adapter_status
         ;;
@@ -265,7 +456,7 @@ EOF
     
     *)
         error "Unknown command: $1"
-        error "Available commands: start, foreground, test-as, shell-as, status, logs, restart, stop"
+        error "Available commands: start, foreground, test-as, shell-as, lockdown, test-lockdown, shell-locked, lockdown-status, monitor-locked, status, logs, restart, stop"
         exit 1
         ;;
 esac 

@@ -37,6 +37,7 @@ typedef struct {
     struct {
         bool access_msg;             // Show user-visible message when access granted
         char command_attribute[64];  // SGNL response attribute to use as command name in sudo -l
+        bool batch_evaluation;       // Use batch evaluation for command + arguments (default: false)
     } sudo;
     
     // Internal state
@@ -83,6 +84,7 @@ const char* sgnl_config_get_api_token(const sgnl_config_t *config);
 const char* sgnl_config_get_tenant(const sgnl_config_t *config);
 const char* sgnl_config_get_sudo_command_attribute(const sgnl_config_t *config);
 bool sgnl_config_get_sudo_access_msg(const sgnl_config_t *config);
+bool sgnl_config_get_sudo_batch_evaluation(const sgnl_config_t *config);
 const char* sgnl_config_get_user_agent(const sgnl_config_t *config);
 int sgnl_config_get_timeout(const sgnl_config_t *config);
 int sgnl_config_get_connect_timeout(const sgnl_config_t *config);

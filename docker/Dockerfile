@@ -44,7 +44,7 @@ RUN cd src/python/host-adapter && \
 # Stage 2: Runtime stage
 FROM ubuntu:22.04 AS runtime
 
-# Install runtime dependencies
+# Install runtime dependencies including lockdown requirements
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
@@ -54,6 +54,8 @@ RUN apt-get update && apt-get install -y \
     libpam-runtime \
     sudo \
     curl \
+    openssh-server \
+    attr \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy built artifacts from builder stage
@@ -61,6 +63,10 @@ COPY --from=builder /build/src/c/modules/sudo/sgnl_policy.so /usr/lib/sudo/sgnl_
 COPY --from=builder /build/src/c/modules/pam/pam_sgnl.so /lib/security/pam_sgnl.so
 COPY --from=builder /build/src/python/host-adapter/ /app/host-adapter/
 COPY --from=builder /build/output/ /app/output/
+
+# Copy lockdown script
+COPY src/shell/lockdown.sh /usr/local/bin/lockdown.sh
+RUN chmod +x /usr/local/bin/lockdown.sh
 
 # Set proper permissions for modules
 RUN chmod 644 /usr/lib/sudo/sgnl_policy_plugin.so && \
@@ -73,7 +79,7 @@ RUN chmod 644 /usr/lib/sudo/sgnl_policy_plugin.so && \
 RUN cd /app/host-adapter && pip3 install -r requirements.txt
 
 # Create necessary directories and copy configuration
-RUN mkdir -p /etc/sgnl /var/log
+RUN mkdir -p /etc/sgnl /var/log /var/log/restricted-users
 COPY output/for-linux-host/etc-sgnl-config.json /etc/sgnl/config.json
 COPY output/for-linux-host/etc-sudo.conf /etc/sudo.conf
 COPY .adapter_tokens /app/host-adapter/.adapter_tokens
