@@ -23,7 +23,7 @@ _current_dir = Path(__file__).parent
 PROTO_PATH = _current_dir / 'proto' / 'adapter.proto'
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -70,7 +70,19 @@ class AdapterServicer(AuthenticatedServicerMixin, adapter_pb2_grpc.AdapterServic
             elif entity_id == 'groups':
                 sor_response = await get_groups()
             elif entity_id == 'executables':
-                sor_response = await get_executables()
+                # Extract follow_symlinks from datasource config
+                follow_symlinks = False
+                if hasattr(datasource_config, 'config') and datasource_config.config:
+                    try:
+                        if isinstance(datasource_config.config, bytes):
+                            config_data = json.loads(datasource_config.config.decode('utf-8'))
+                        else:
+                            config_data = datasource_config.config
+                        follow_symlinks = config_data.get('follow_symlinks', False)
+                    except (json.JSONDecodeError, AttributeError, TypeError):
+                        logger.warning("Could not parse datasource config for follow_symlinks, using default (False)")
+                
+                sor_response = await get_executables(follow_symlinks=follow_symlinks)
             elif entity_id == 'pam_config':
                 sor_response = await get_pam_config()
             elif entity_id == 'sudoers_config':

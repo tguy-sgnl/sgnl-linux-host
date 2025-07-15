@@ -80,12 +80,37 @@ async def get_groups() -> List[Dict[str, Any]]:
     return groups
 
 
-async def get_executables(search_paths: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+#async def get_groupmembers() -> List[Dict[str, Any]]:
+#    """
+#    Get all system groups from /etc/group.
+#    
+#    Returns:
+#        List of group dictionaries with group information
+#    """
+#    groups = []
+#    
+#    try:
+#        # Get all groups from the system
+#        for group in grp.getgrall():
+#            group_info = {
+#                'id': str(group.gr_gid),
+#                'members': list(group.gr_mem),
+#            }
+#            groups.append(group_info)
+#            
+#    except Exception as e:
+#        logger.error(f"Error getting groups: {e}")
+#        
+#    return groups
+
+
+async def get_executables(search_paths: Optional[List[str]] = None, follow_symlinks: bool = False) -> List[Dict[str, Any]]:
     """
     Get executable files from specified directories.
     
     Args:
         search_paths: List of directories to search. Defaults to common bin directories.
+        follow_symlinks: Whether to follow symlinks. If False, only real files are returned.
         
     Returns:
         List of executable dictionaries with file information
@@ -108,6 +133,10 @@ async def get_executables(search_paths: Optional[List[str]] = None) -> List[Dict
                 continue
                 
             for file_path in path_obj.iterdir():
+                # Skip symlinks if follow_symlinks is False
+                if not follow_symlinks and file_path.is_symlink():
+                    continue
+                    
                 if file_path.is_file():
                     try:
                         file_stat = file_path.stat()
@@ -258,8 +287,52 @@ async def get_host_info() -> Dict[str, Any]:
     Returns:
         Dictionary with host information
     """
+    # Get machine ID with fallbacks
+    machine_id = None
+    
+    # Try to read from /etc/machine-id first
+    try:
+        with open('/etc/machine-id', 'r') as f:
+            machine_id = f.read().strip()
+    except (OSError, FileNotFoundError):
+        pass
+    
+    # Fallback to hostname if machine-id is not available
+    if not machine_id:
+        machine_id = socket.gethostname()
+    
+    # Final fallback to MAC address if hostname is not available
+    if not machine_id:
+        try:
+            # Get the first non-loopback interface MAC address
+            result = await asyncio.create_subprocess_exec(
+                'ip', 'link', 'show',
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await result.communicate()
+            
+            if result.returncode == 0:
+                lines = stdout.decode('utf-8').splitlines()
+                for line in lines:
+                    if 'link/ether' in line:
+                        # Extract MAC address from the line
+                        parts = line.split()
+                        for part in parts:
+                            if ':' in part and len(part) == 17:  # MAC address format
+                                machine_id = part
+                                break
+                        if machine_id:
+                            break
+        except (OSError, FileNotFoundError):
+            pass
+    
+    # If all fallbacks fail, use a default
+    if not machine_id:
+        machine_id = "unknown-host"
+    
     host_info: Dict[str, Any] = {
-        'id': socket.gethostname(),
+        'id': machine_id,
         'hostname': socket.gethostname(),
         'fqdn': socket.getfqdn(),
         'platform': platform.platform(),

@@ -1,7 +1,6 @@
 import os
 import json
 from typing import Dict, Any, Optional, List
-from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,10 +9,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_GRPC_PORT = '8082'
 DEFAULT_PAGE_SIZE = 100
 MAX_PAGE_SIZE = 1000
-
-# Get current directory for configuration files
-_current_dir = Path(__file__).parent
-
 
 class DatasourceConfig:
     """Configuration for a datasource."""

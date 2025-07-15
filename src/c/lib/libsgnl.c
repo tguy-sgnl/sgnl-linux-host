@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <dirent.h>
 #include <curl/curl.h>
 #include <json-c/json.h>
 
@@ -135,6 +136,70 @@ static char* generate_request_id_internal(void) {
              (unsigned int)(random_val & 0xFFFF));
     
     return request_id;
+}
+
+// Get system device ID with fallback chain: machine-id -> hostname -> MAC address
+static char* get_device_id(void) {
+    static char device_id[256];
+    
+    // First try: /etc/machine-id
+    FILE *machine_id_file = fopen("/etc/machine-id", "r");
+    if (machine_id_file) {
+        if (fgets(device_id, sizeof(device_id), machine_id_file)) {
+            // Remove newline if present
+            size_t len = strlen(device_id);
+            if (len > 0 && device_id[len-1] == '\n') {
+                device_id[len-1] = '\0';
+            }
+            fclose(machine_id_file);
+            return device_id;
+        }
+        fclose(machine_id_file);
+    }
+    
+    // Second try: hostname
+    if (gethostname(device_id, sizeof(device_id)) == 0) {
+        return device_id;
+    }
+    
+    // Third try: MAC address of first network interface
+    FILE *net_dev_file = fopen("/sys/class/net/eth0/address", "r");
+    if (!net_dev_file) {
+        net_dev_file = fopen("/sys/class/net/wlan0/address", "r");
+    }
+    if (!net_dev_file) {
+        // Try to find any network interface
+        DIR *net_dir = opendir("/sys/class/net");
+        if (net_dir) {
+            struct dirent *entry;
+            while ((entry = readdir(net_dir)) != NULL) {
+                if (entry->d_name[0] != '.' && strcmp(entry->d_name, "lo") != 0) {
+                    char path[256];
+                    snprintf(path, sizeof(path), "/sys/class/net/%s/address", entry->d_name);
+                    net_dev_file = fopen(path, "r");
+                    if (net_dev_file) break;
+                }
+            }
+            closedir(net_dir);
+        }
+    }
+    
+    if (net_dev_file) {
+        if (fgets(device_id, sizeof(device_id), net_dev_file)) {
+            // Remove newline if present
+            size_t len = strlen(device_id);
+            if (len > 0 && device_id[len-1] == '\n') {
+                device_id[len-1] = '\0';
+            }
+            fclose(net_dev_file);
+            return device_id;
+        }
+        fclose(net_dev_file);
+    }
+    
+    // Final fallback
+    strcpy(device_id, "unknown-device");
+    return device_id;
 }
 
 // Load configuration using common config system
@@ -536,6 +601,7 @@ sgnl_access_result_t* sgnl_evaluate_access(sgnl_client_t *client,
     
     // Build request
     json_object_object_add(principal, "id", json_object_new_string(principal_id));
+    json_object_object_add(principal, "deviceId", json_object_new_string(get_device_id()));
     json_object_object_add(request, "principal", principal);
     
     if (asset_id) {
@@ -630,6 +696,7 @@ sgnl_access_result_t** sgnl_evaluate_access_batch(sgnl_client_t *client,
     
     // Build request
     json_object_object_add(principal, "id", json_object_new_string(principal_id));
+    json_object_object_add(principal, "deviceId", json_object_new_string(get_device_id()));
     json_object_object_add(request, "principal", principal);
     
     // Add each query
@@ -827,10 +894,10 @@ char** sgnl_search_assets(sgnl_client_t *client,
     char json_body[1024];
     snprintf(json_body, sizeof(json_body), 
              "{"
-             "\"principal\":{\"id\":\"%s\"},"
+             "\"principal\":{\"id\":\"%s\",\"deviceId\":\"%s\"},"
              "\"queries\":[{\"action\":\"%s\"}]"
              "}", 
-             principal_id, search_action);
+             principal_id, get_device_id(), search_action);
     
     sgnl_log_debug(client, "Making asset search request to: %s.%s%s", client->tenant, client->api_url, endpoint);
     sgnl_log_debug(client, "Request body: %s", json_body);

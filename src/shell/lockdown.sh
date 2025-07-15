@@ -8,6 +8,9 @@ if [ -z "$USERNAME" ]; then
     exit 1
 fi
 
+# Sanitize username for use in filenames (replace @ with _)
+SAFE_USERNAME=$(echo "$USERNAME" | tr '@' '_')
+
 echo "🔒 Implementing lockdown for user: $USERNAME"
 
 # 1. Create user if doesn't exist
@@ -175,6 +178,7 @@ less() {
 #     done
 #     /usr/bin/mkdir "$@"
 # }
+PROFILE_EOF
 
 # Create simple .bashrc that sources profile
 cat > "$USER_HOME/.bashrc" << 'BASHRC_EOF'
@@ -183,10 +187,11 @@ source $HOME/.profile
 BASHRC_EOF
 
 # Create custom shell script
-cat > /usr/local/bin/lockdown-shell-$USERNAME << SHELL_EOF
+cat > /usr/local/bin/lockdown-shell-$SAFE_USERNAME << 'SHELL_EOF'
 #!/bin/bash
 
-USERNAME_LOCKED="$USERNAME"
+# Get username from argument or from whoami
+USERNAME_LOCKED="${1:-$(whoami)}"
 USER_HOME="/home/$USERNAME_LOCKED"
 
 # Force user to home directory
@@ -207,7 +212,7 @@ export PATH="$USER_HOME/bin"
 exec /bin/bash --login
 SHELL_EOF
 
-chmod +x /usr/local/bin/lockdown-shell-$USERNAME
+chmod +x /usr/local/bin/lockdown-shell-$SAFE_USERNAME
 
 # Set proper permissions for profile files
 chown "$USERNAME:$USERNAME" "$USER_HOME/.profile" "$USER_HOME/.bashrc" 2>/dev/null
@@ -218,7 +223,7 @@ mkdir -p "$USER_HOME/tmp"
 chown "$USERNAME:$USERNAME" "$USER_HOME/tmp"
 chmod 700 "$USER_HOME/tmp"
 
-usermod -s "/usr/local/bin/lockdown-shell-$USERNAME" "$USERNAME"
+usermod -s "/usr/local/bin/lockdown-shell-$SAFE_USERNAME" "$USERNAME"
 
 # Disable SSH access
 echo "DenyUsers $USERNAME" >> /etc/ssh/sshd_config.lockdown 2>/dev/null
